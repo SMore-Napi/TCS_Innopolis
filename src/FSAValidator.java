@@ -60,14 +60,18 @@ public class FSAValidator {
      *
      * @return Array List of strings
      */
-    static ArrayList<String> input() throws FileNotFoundException {
-        Scanner scanner = new Scanner(new File(INPUT_FILE));
+    static ArrayList<String> input() {
         ArrayList<String> input = new ArrayList<>(COUNT_LINES);
-
-        while (scanner.hasNext()) {
-            input.add(scanner.nextLine());
+        Scanner scanner;
+        try {
+            scanner = new Scanner(new File(INPUT_FILE));
+            while (scanner.hasNext()) {
+                input.add(scanner.nextLine());
+            }
+            scanner.close();
+        } // If file has not been found then we do nothing.
+        catch (FileNotFoundException e) {
         }
-        scanner.close();
 
         return input;
     }

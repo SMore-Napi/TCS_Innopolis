@@ -1,2 +1,1 @@
-Error:
-E2: Some states are disjoint
+FSA is incomplete

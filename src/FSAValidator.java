@@ -74,22 +74,32 @@ public class FSAValidator {
                     if (checkE2(states, alphabet, transitionFunctions)) {
                         // Check for E4 error.
                         if (checkE4(initialState)) {
-                            boolean isComplete = true;
 
-                            if (checkW1(isComplete)) {
-                                isComplete = false;
-                            }
-                            if (checkW2(isComplete)) {
-                                isComplete = false;
-                            }
-                            if (checkW3(isComplete)) {
-                                isComplete = false;
-                            }
+                            boolean warning1 = !checkW1(finiteStates);
+                            boolean warning2 = !checkW2(states, alphabet, initialState, transitionFunctions);
+                            boolean warning3 = !checkW3();
 
-                            if (isComplete) {
+                            // Print Warning if FSA is incomplete.
+                            if (warning1 || warning2 || warning3) {
+                                printWriter.println("FSA is incomplete");
+                                printWriter.println("Warning:");
+
+                                // Check warning 1
+                                if (warning1) {
+                                    printWriter.println("W1: Accepting state is not defined");
+                                }
+                                // Check warning 2
+                                if (warning2) {
+                                    printWriter.println("W2: Some states are not reachable from the initial state");
+                                }
+                                // Check warning 3
+                                if (warning3) {
+                                    printWriter.println("W3: FSA is nondeterministic");
+                                }
+
+                            } else {
                                 printWriter.println("FSA is complete");
                             }
-
                         }
                     }
                 }
@@ -97,17 +107,16 @@ public class FSAValidator {
         }
     }
 
-    static boolean checkW1(boolean isComplete) {
-        //todo
-        return true;
+    static boolean checkW1(ArrayList<String> finiteStates) {
+        return finiteStates.size() >= 1;
     }
 
-    static boolean checkW2(boolean isComplete) {
-        //todo
-        return true;
+    static boolean checkW2(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> initialState, ArrayList<String> transitionFunctions) {
+        ArrayList<String> connectedStates = getConnectedStates(getIndex(initialState.get(0), states), states, alphabet, transitionFunctions);
+        return connectedStates.size() == states.size();
     }
 
-    static boolean checkW3(boolean isComplete) {
+    static boolean checkW3() {
         //todo
         return true;
     }
@@ -163,7 +172,7 @@ public class FSAValidator {
      * @return true if there is no error.
      */
     static boolean checkE2(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
-        ArrayList<String> connectedStates = getConnectedStates(states, alphabet, transitionFunctions);
+        ArrayList<String> connectedStates = getConnectedStates(0, states, alphabet, transitionFunctions);
         if (connectedStates.size() != states.size()) {
             printWriter.println("Error:");
             printWriter.println("E2: Some states are disjoint");
@@ -183,14 +192,21 @@ public class FSAValidator {
     /**
      * Elements of this table – states.
      */
-    static String[][] getIncidenceMatrix(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
-        String[][] table = new String[states.size()][alphabet.size()];
+    static ArrayList<String>[][] getIncidenceMatrix(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
+
+        ArrayList<String>[][] table = new ArrayList[states.size()][alphabet.size()];
+
+        for (int i = 0; i < states.size(); i++) {
+            for (int j = 0; j < alphabet.size(); j++) {
+                table[i][j] = new ArrayList<>();
+            }
+        }
 
         for (String transition : transitionFunctions) {
             String[] tokens = transition.split(">");
             int n = getIndex(tokens[0], states);
             int m = getIndex(tokens[1], alphabet);
-            table[n][m] = tokens[2];
+            table[n][m].add(tokens[2]);
         }
 
         return table;
@@ -213,10 +229,9 @@ public class FSAValidator {
         return -1;
     }
 
-    static ArrayList<String> getConnectedStates(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
-        String[][] table = getIncidenceMatrix(states, alphabet, transitionFunctions);
+    static ArrayList<String> getConnectedStates(int startState, ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
+        ArrayList<String>[][] table = getIncidenceMatrix(states, alphabet, transitionFunctions);
 
-        int startState = 0;
         int countCheckedStates = 0;
         boolean checkNewStates = true;
 
@@ -229,9 +244,7 @@ public class FSAValidator {
 
             ArrayList<String> statesToVisit = new ArrayList<>(states.size());
             for (int i = 0; i < table[startState].length; i++) {
-                if (table[startState][i] != null) {
-                    statesToVisit.add(table[startState][i]);
-                }
+                statesToVisit.addAll(table[startState][i]);
             }
 
             for (String state : statesToVisit) {
@@ -464,7 +477,7 @@ public class FSAValidator {
 
         for (int i = 0; i < parameter.length(); i++) {
             char x = parameter.charAt(i);
-            if (!(isDigit(x) || isLatinLetters(x))) {
+            if (!(Character.isLetterOrDigit(x))) {
                 if (!(underscore && x == '_')) {
                     if (!(transition && x == '>' && i != 0 && i != parameter.length() - 1)) {
                         return false;
@@ -473,38 +486,6 @@ public class FSAValidator {
             }
         }
         return true;
-    }
-
-    /**
-     * Check if this symbol is a digit.
-     *
-     * @param x - symbol to check
-     * @return true if x is digit
-     */
-    static boolean isDigit(char x) {
-        char[] digits = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
-        for (char digit : digits) {
-            if (x == digit) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Check if this symbol is a latin letter.
-     *
-     * @param x - symbol to check
-     * @return true of x is a latin letter.
-     */
-    static boolean isLatinLetters(char x) {
-        String letters = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
-        for (int i = 0; i < letters.length(); i++) {
-            if (x == letters.charAt(i)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

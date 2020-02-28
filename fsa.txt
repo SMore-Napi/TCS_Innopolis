@@ -1,5 +1,5 @@
-states=[s1,s2,s3]
-alpha=[0,1]
-init.st=[s1]
-fin.st=[s3]
-trans=[s1>0>s2,s2>1>s1,s2>0>s3]
+states=[on,off]
+alpha=[turn_on,turn_off]
+init.st=[off]
+fin.st=[]
+tran

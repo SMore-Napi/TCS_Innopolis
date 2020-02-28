@@ -596,6 +596,12 @@ public class FSAValidator {
      * @return true if the beginning and the end of a 'string' are correct.
      */
     static boolean validateBeginningAndEnd(String string, String sample) {
+
+        // To compare the beginning of a string we should compare the length of this string with the sample.
+        if (string.length() <= sample.length()) {
+            return false;
+        }
+
         // If the start of a sting is correct.
         if (!string.substring(0, sample.length()).equals(sample)) {
             return false;

@@ -1,1 +1,2 @@
-FSA is incomplete
+Error:
+E5: Input file is malformed

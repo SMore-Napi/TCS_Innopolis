@@ -1,3 +1,5 @@
+package assignment2;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
@@ -6,23 +8,25 @@ import java.util.*;
 /**
  * Roman Soldatov BS19-02
  */
-public class FSAValidator {
+public class FSARegExpTranslator {
     static final String INPUT_FILE = "fsa.txt";
     static final String OUTPUT_FILE = "result.txt";
-    static final int COUNT_LINES = 5;
-
-    // The start of input lines.
-    static final String STATES = "states=[";
-    static final String ALPHABET = "alpha=[";
-    static final String INITIAL_STATE = "init.st=[";
-    static final String FINITE_STATES = "fin.st=[";
-    static final String TRANSITION_FUNCTION = "trans=[";
-
-    static PrintWriter printWriter;
 
     public static void main(String[] args) throws FileNotFoundException {
-        printWriter = new PrintWriter(new File(OUTPUT_FILE));
-        checkFSAValidator();
+        // Read the input from the file.
+        ArrayList<String> input = readFile(INPUT_FILE);
+
+        // Validate the input.
+        String result = FSAValidator.checkFSAValidator(input);
+
+        // If the FSA has passed the validation, then we find the Regular Expresion.
+        if (result.isEmpty()){
+            result = RegularExpression.transformToRegularExpression(input);
+        }
+
+        // Print the result.
+        PrintWriter printWriter = new PrintWriter(new File(OUTPUT_FILE));
+        printWriter.print(result);
         printWriter.close();
     }
 
@@ -31,11 +35,11 @@ public class FSAValidator {
      *
      * @return Array List of strings
      */
-    static ArrayList<String> readFile() {
-        ArrayList<String> input = new ArrayList<>(COUNT_LINES);
+    static ArrayList<String> readFile(String inputFile) {
+        ArrayList<String> input = new ArrayList<>();
         Scanner scanner;
         try {
-            scanner = new Scanner(new File(INPUT_FILE));
+            scanner = new Scanner(new File(inputFile));
             while (scanner.hasNext()) {
                 input.add(scanner.nextLine());
             }
@@ -46,6 +50,36 @@ public class FSAValidator {
 
         return input;
     }
+}
+
+/**
+ * This class transforms the automata to the
+ * regular expression which the automata recognise.
+ */
+class RegularExpression{
+    public static String transformToRegularExpression(ArrayList<String> input){
+        // todo
+        return null;
+    }
+}
+
+/**
+ * This class validates the Deterministic FSA.
+ * It returns the string with validation report.
+ * If the input is DFSA, then it returns an empty string.
+ */
+class FSAValidator {
+
+    static final int COUNT_LINES = 5;
+
+    // The start of input lines.
+    static final String STATES = "states=[";
+    static final String ALPHABET = "alpha=[";
+    static final String INITIAL_STATE = "init.st=[";
+    static final String FINITE_STATES = "fin.st=[";
+    static final String TRANSITION_FUNCTION = "trans=[";
+
+    static StringBuilder resultToReturn = new StringBuilder();
 
     /**
      * FSA Validator.
@@ -54,9 +88,7 @@ public class FSAValidator {
      * is FSA complete/incomplete;
      * W1, W2, W3 warnings.
      */
-    static void checkFSAValidator() {
-        // Input strings from the file.
-        ArrayList<String> input = readFile();
+    public static String checkFSAValidator(ArrayList<String> input) {
 
         // Check for E5 error.
         if (checkE5(input)) {
@@ -75,103 +107,17 @@ public class FSAValidator {
                     if (checkE2(states, transitionFunctions)) {
                         // Check for E4 error.
                         if (checkE4(initialState)) {
-
-                            // Print is FSA complete.
-                            if (isFSAComplete(states, alphabet, transitionFunctions)) {
-                                printWriter.println("FSA is complete");
-                            } else {
-                                printWriter.println("FSA is incomplete");
-                            }
-
-                            // Print Warnings
-                            boolean warning1 = !checkW1(finiteStates);
-                            boolean warning2 = !checkW2(states, alphabet, initialState, transitionFunctions);
-                            boolean warning3 = !checkW3(states, alphabet, transitionFunctions);
-                            if (warning1 || warning2 || warning3) {
-                                printWriter.println("Warning:");
-                                // Check warning 1
-                                if (warning1) {
-                                    printWriter.println("W1: Accepting state is not defined");
-                                }
-                                // Check warning 2
-                                if (warning2) {
-                                    printWriter.println("W2: Some states are not reachable from the initial state");
-                                }
-                                // Check warning 3
-                                if (warning3) {
-                                    printWriter.println("W3: FSA is nondeterministic");
-                                }
+                            // Check for E6 error.
+                            if (checkE6(states, alphabet, transitionFunctions)) {
+                                return resultToReturn.toString();
                             }
                         }
                     }
                 }
             }
         }
-    }
 
-    /**
-     * Check if FSA is complete.
-     * Each cell of a matrix must contain at least one state.
-     *
-     * @return true if FSA is complete, false - otherwise.
-     */
-    static boolean isFSAComplete(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
-
-        ArrayList<String>[][] matrix = getStatesAlphabetMatrix(states, alphabet, transitionFunctions);
-
-        for (ArrayList<String>[] row : matrix) {
-            for (ArrayList<String> cell : row) {
-                if (cell.size() == 0) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Check for the Warning 1
-     * Is accepting state is not defined.
-     *
-     * @return true if there is no warning.
-     */
-    static boolean checkW1(ArrayList<String> finiteStates) {
-        return finiteStates.size() >= 1;
-    }
-
-    /**
-     * Check for the Warning 2
-     * If there are no all states in 'connectedStates' list,
-     * then it means that not all states are reachable from the initial state.
-     *
-     * @return true if there is no warning.
-     */
-    static boolean checkW2(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> initialState, ArrayList<String> transitionFunctions) {
-        ArrayList<String> connectedStates = getConnectedStates(states.indexOf(initialState.get(0)), states, alphabet, transitionFunctions);
-        return connectedStates.size() == states.size();
-    }
-
-    /**
-     * Check for the Warning 3.
-     * Is FSA is deterministic.
-     * Each cell of a matrix must contain at most one state.
-     *
-     * @return true if there is no warning.
-     */
-    static boolean checkW3(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
-
-        ArrayList<String>[][] matrix = getStatesAlphabetMatrix(states, alphabet, transitionFunctions);
-
-        for (ArrayList<String>[] row : matrix) {
-            for (ArrayList<String> cell : row) {
-                if (cell.size() > 1) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        return resultToReturn.toString();
     }
 
     /**
@@ -180,7 +126,7 @@ public class FSAValidator {
      *
      * @return true if there is no error.
      */
-    static boolean checkE1(ArrayList<String> states, ArrayList<String> initialState, ArrayList<String> finiteStates, ArrayList<String> transitionFunctions) {
+    private static boolean checkE1(ArrayList<String> states, ArrayList<String> initialState, ArrayList<String> finiteStates, ArrayList<String> transitionFunctions) {
 
         // Check initial state
         for (String state : initialState) {
@@ -220,9 +166,9 @@ public class FSAValidator {
      *
      * @param state - the state to prtint about.
      */
-    static void printE1(String state) {
-        printWriter.println("Error:");
-        printWriter.println("E1: A state '" + state + "' is not in the set of states");
+    private static void printE1(String state) {
+        resultToReturn.append("Error:\n");
+        resultToReturn.append("E1: A state '").append(state).append("' is not in the set of states\n");
     }
 
     /**
@@ -234,13 +180,13 @@ public class FSAValidator {
      *
      * @return true if there is no error.
      */
-    static boolean checkE2(ArrayList<String> states, ArrayList<String> transitionFunctions) {
+    private static boolean checkE2(ArrayList<String> states, ArrayList<String> transitionFunctions) {
 
         ArrayList<String> jointStates = getJointStates(states, transitionFunctions);
 
         if (jointStates.size() != states.size()) {
-            printWriter.println("Error:");
-            printWriter.println("E2: Some states are disjoint");
+            resultToReturn.append("Error:\n");
+            resultToReturn.append("E2: Some states are disjoint\n");
             return false;
         }
 
@@ -255,7 +201,7 @@ public class FSAValidator {
      * @param transitionFunctions - functions which represent states connection.
      * @return list of linked states.
      */
-    static ArrayList<String> getJointStates(ArrayList<String> states, ArrayList<String> transitionFunctions) {
+    private static ArrayList<String> getJointStates(ArrayList<String> states, ArrayList<String> transitionFunctions) {
 
         boolean[][] matrix = getIncidenceMatrix(states, transitionFunctions);
 
@@ -310,7 +256,7 @@ public class FSAValidator {
      * Elements of this table – states.
      * Each cell contains a list of states which are reachable from state_i by alpha.Element_j transition.
      */
-    static ArrayList<String>[][] getStatesAlphabetMatrix(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
+    private static ArrayList<String>[][] getStatesAlphabetMatrix(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
 
         // Initializing the table
         ArrayList<String>[][] table = new ArrayList[states.size()][alphabet.size()];
@@ -344,7 +290,7 @@ public class FSAValidator {
      * <p>
      * Each cell contains 'true' if state_i and state_j are linked, 'false' - otherwise
      */
-    static boolean[][] getIncidenceMatrix(ArrayList<String> states, ArrayList<String> transitionFunctions) {
+    private static boolean[][] getIncidenceMatrix(ArrayList<String> states, ArrayList<String> transitionFunctions) {
 
         boolean[][] matrix = new boolean[states.size()][states.size()];
 
@@ -369,7 +315,7 @@ public class FSAValidator {
      * @param transitionFunctions - functions which represent states connection.
      * @return list of connected states.
      */
-    static ArrayList<String> getConnectedStates(int startState, ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
+    private static ArrayList<String> getConnectedStates(int startState, ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
 
         ArrayList<String>[][] matrix = getStatesAlphabetMatrix(states, alphabet, transitionFunctions);
 
@@ -414,12 +360,12 @@ public class FSAValidator {
      *
      * @return true if there is no error.
      */
-    static boolean checkE3(ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
+    private static boolean checkE3(ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
         for (String string : transitionFunctions) {
             String[] alpha = string.split(">");
             if (!alphabet.contains(alpha[1])) {
-                printWriter.println("Error:");
-                printWriter.println("E3: A transition '" + alpha[1] + "' is not represented in the alphabet");
+                resultToReturn.append("Error:\n");
+                resultToReturn.append("E3: A transition '").append(alpha[1]).append("' is not represented in the alphabet\n");
                 return false;
             }
         }
@@ -431,10 +377,10 @@ public class FSAValidator {
      *
      * @return true if there is no error.
      */
-    static boolean checkE4(ArrayList<String> initialState) {
+    private static boolean checkE4(ArrayList<String> initialState) {
         if (initialState == null || initialState.size() != 1) {
-            printWriter.println("Error:");
-            printWriter.println("E4: Initial state is not defined");
+            resultToReturn.append("Error:\n");
+            resultToReturn.append("E4: Initial state is not defined\n");
             return false;
         }
         return true;
@@ -445,7 +391,7 @@ public class FSAValidator {
      *
      * @return true if there is no error.
      */
-    static boolean checkE5(ArrayList<String> input) {
+    private static boolean checkE5(ArrayList<String> input) {
         boolean isCorrect = true;
 
         // Checks if the input contains exactly 5 lines.
@@ -480,11 +426,35 @@ public class FSAValidator {
 
         // Print message if there is an error.
         if (!isCorrect) {
-            printWriter.println("Error:");
-            printWriter.println("E5: Input file is malformed");
+            resultToReturn.append("Error:\n");
+            resultToReturn.append("E5: Input file is malformed\n");
         }
 
         return isCorrect;
+    }
+
+    /**
+     * Check for the Error 6.
+     * Is FSA is deterministic.
+     * Each cell of a matrix must contain at most one state.
+     *
+     * @return true if there is no error.
+     */
+    private static boolean checkE6(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
+
+        ArrayList<String>[][] matrix = getStatesAlphabetMatrix(states, alphabet, transitionFunctions);
+
+        for (ArrayList<String>[] row : matrix) {
+            for (ArrayList<String> cell : row) {
+                if (cell.size() > 1) {
+                    resultToReturn.append("Error:\n");
+                    resultToReturn.append("E6: FSA is nondeterministic\n");
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -492,7 +462,7 @@ public class FSAValidator {
      *
      * @return true if it is correct.
      */
-    static boolean validateStatesString(String states) {
+    private static boolean validateStatesString(String states) {
 
         // If the beginning and the end of a string are correct.
         if (!validateBeginningAndEnd(states, STATES)) {
@@ -512,7 +482,7 @@ public class FSAValidator {
      *
      * @return true if it is correct.
      */
-    static boolean validateAlphabetString(String alphabet) {
+    private static boolean validateAlphabetString(String alphabet) {
 
         // If the beginning and the end of a string are correct.
         if (!validateBeginningAndEnd(alphabet, ALPHABET)) {
@@ -532,7 +502,7 @@ public class FSAValidator {
      *
      * @return true if it is correct.
      */
-    static boolean validateInitialStateString(String initialState) {
+    private static boolean validateInitialStateString(String initialState) {
 
         // If the beginning and the end of a string are correct.
         if (!validateBeginningAndEnd(initialState, INITIAL_STATE)) {
@@ -552,7 +522,7 @@ public class FSAValidator {
      *
      * @return true if it is correct.
      */
-    static boolean validateFiniteStatesString(String finiteStates) {
+    private static boolean validateFiniteStatesString(String finiteStates) {
 
         // If the beginning and the end of a string are correct.
         if (!validateBeginningAndEnd(finiteStates, FINITE_STATES)) {
@@ -572,7 +542,7 @@ public class FSAValidator {
      *
      * @return true if it is correct.
      */
-    static boolean validateTransitionFunctionsString(String transitionFunction) {
+    private static boolean validateTransitionFunctionsString(String transitionFunction) {
 
         // If the beginning and the end of a string are correct.
         if (!validateBeginningAndEnd(transitionFunction, TRANSITION_FUNCTION)) {
@@ -595,7 +565,7 @@ public class FSAValidator {
      * @param sample - string compares with this 'sample'
      * @return true if the beginning and the end of a 'string' are correct.
      */
-    static boolean validateBeginningAndEnd(String string, String sample) {
+    private static boolean validateBeginningAndEnd(String string, String sample) {
 
         // To compare the beginning of a string we should compare the length of this string with the sample.
         if (string.length() <= sample.length()) {
@@ -623,7 +593,7 @@ public class FSAValidator {
      * @param transition - if symbol '>' is allowed.
      * @return true if all parameters are correct, false - otherwise.
      */
-    static boolean validateParameters(String string, boolean underscore, boolean transition) {
+    private static boolean validateParameters(String string, boolean underscore, boolean transition) {
         if (string.length() == 0) {
             return true;
         }
@@ -643,7 +613,7 @@ public class FSAValidator {
      * @param transition - if symbol '>' is allowed.
      * @return true if a parameter is correct.
      */
-    static boolean checkCharacters(String parameter, boolean underscore, boolean transition) {
+    private static boolean checkCharacters(String parameter, boolean underscore, boolean transition) {
         // Transition function must contain exactly 3 parameters
         if (transition) {
             if (parameter.split(">").length != 3) {
@@ -664,7 +634,7 @@ public class FSAValidator {
         return true;
     }
 
-    static boolean isLatinLetters(char x) {
+    private static boolean isLatinLetters(char x) {
         String letters = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
         for (int i = 0; i < letters.length(); i++) {
             if (x == letters.charAt(i)) {
@@ -678,10 +648,53 @@ public class FSAValidator {
      * @param string - parameters separated by comma.
      * @return Array List of parameters.
      */
-    static ArrayList<String> getParameters(String string) {
+    private static ArrayList<String> getParameters(String string) {
         if (string.length() != 0) {
             return new ArrayList<>(Arrays.asList(string.split(",")));
         }
         return new ArrayList<>();
+    }
+
+    /**
+     * Check if FSA is complete.
+     * Each cell of a matrix must contain at least one state.
+     *
+     * @return true if FSA is complete, false - otherwise.
+     */
+    private static boolean isFSAComplete(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> transitionFunctions) {
+
+        ArrayList<String>[][] matrix = getStatesAlphabetMatrix(states, alphabet, transitionFunctions);
+
+        for (ArrayList<String>[] row : matrix) {
+            for (ArrayList<String> cell : row) {
+                if (cell.size() == 0) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Check for the Warning 1
+     * Is accepting state is not defined.
+     *
+     * @return true if there is no warning.
+     */
+    private static boolean checkW1(ArrayList<String> finiteStates) {
+        return finiteStates.size() >= 1;
+    }
+
+    /**
+     * Check for the Warning 2
+     * If there are no all states in 'connectedStates' list,
+     * then it means that not all states are reachable from the initial state.
+     *
+     * @return true if there is no warning.
+     */
+    private static boolean checkW2(ArrayList<String> states, ArrayList<String> alphabet, ArrayList<String> initialState, ArrayList<String> transitionFunctions) {
+        ArrayList<String> connectedStates = getConnectedStates(states.indexOf(initialState.get(0)), states, alphabet, transitionFunctions);
+        return connectedStates.size() == states.size();
     }
 }

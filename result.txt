@@ -1,2 +1,2 @@
 Error:
-E5: Input file is malformed
+E2: Some states are disjoint

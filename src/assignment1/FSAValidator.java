@@ -1,3 +1,5 @@
+package assignment1;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
@@ -6,7 +8,7 @@ import java.util.*;
 /**
  * Roman Soldatov BS19-02
  */
-public class FSARegExpTranslator {
+public class FSAValidator {
     static final String INPUT_FILE = "fsa.txt";
     static final String OUTPUT_FILE = "result.txt";
     static final int COUNT_LINES = 5;
@@ -685,4 +687,3 @@ public class FSARegExpTranslator {
         return new ArrayList<>();
     }
 }
-

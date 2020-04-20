@@ -7,6 +7,7 @@ import java.util.*;
 
 /**
  * Roman Soldatov BS19-02
+ * Home Assignment 2
  */
 public class FSARegExpTranslator {
     static final String INPUT_FILE = "fsa.txt";
@@ -20,7 +21,7 @@ public class FSARegExpTranslator {
         String result = FSAValidator.checkFSAValidator(input);
 
         // If the FSA has passed the validation, then we find the Regular Expresion.
-        if (result.isEmpty()){
+        if (result.isEmpty()) {
             result = RegularExpression.transformToRegularExpression(input);
         }
 
@@ -56,10 +57,193 @@ public class FSARegExpTranslator {
  * This class transforms the automata to the
  * regular expression which the automata recognise.
  */
-class RegularExpression{
-    public static String transformToRegularExpression(ArrayList<String> input){
-        // todo
-        return null;
+class RegularExpression {
+    /**
+     * The auxiliary class to store the Regular Expression.
+     */
+    static class RegExp {
+        String from; // the start state.
+        String to; // the end state.
+        String value; // the regular expression itself.
+
+        public RegExp(String from, String to, String value) {
+            this.from = from;
+            this.to = to;
+            this.value = value;
+        }
+    }
+
+    /**
+     * The main method which calculates the regular expression of the given (D)FSA.
+     * This method uses the 'Kleene’s Algorithm'.
+     *
+     * @param input - validated input strings of the (D)FSA.
+     * @return the regular expression.
+     */
+    public static String transformToRegularExpression(ArrayList<String> input) {
+        // Get strings of states, initial state, finite states and transition functions.
+        ArrayList<String> states = FSAValidator.getStates(input);
+        ArrayList<String> initialStates = FSAValidator.getInitialState(input);
+        ArrayList<String> finiteStates = FSAValidator.getFiniteStates(input);
+        ArrayList<String> transitionFunctions = FSAValidator.getTransitionFunctions(input);
+
+        // Get the regular expressions for each step and each state.
+        ArrayList<ArrayList<RegExp>> regularExpressions = getRegularExpressions(states, transitionFunctions);
+
+        /* The regular expression represents the language accepted by (D)FSA
+           via union all regular expressions from the initial state to the finite states.
+           This expressions are stored in the last ArrayList in the 'regularExpressions'. */
+        ArrayList<RegExp> lastStepExpressions = regularExpressions.get(regularExpressions.size() - 1);
+
+        // This list will store the union of all accepted regular expressions.
+        ArrayList<RegExp> regex = new ArrayList<>();
+
+        // We are interesting in regular expressions from the last 'Kleene’s Algorithm' step
+        // which represents the languages starting from the 'initialState' and ending in the 'finiteState'
+        for (String finiteState : finiteStates) {
+            for (String initialState : initialStates) {
+                for (RegExp expression : lastStepExpressions) {
+                    if (expression.from.equals(initialState) && expression.to.equals(finiteState)) {
+                        regex.add(expression);
+                    }
+                }
+            }
+        }
+
+        // Rewrite the 'regex' to the string.
+        StringBuilder result = new StringBuilder();
+        // In case there are no any possible regular expressions.
+        if (regex.size() == 0) {
+            result.append("{}");
+        } // Rewriting into the string.
+        else {
+            result.append(regex.get(0).value);
+            for (int i = 1; i < regex.size(); i++) {
+                result.append('|').append(regex.get(i).value);
+            }
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * This method calculates all regular expressions for each step and each state.
+     *
+     * @param states              - states of (D)FSA.
+     * @param transitionFunctions - transitions of (D)FSA.
+     * @return the Array List of regular expressions on each step.
+     */
+    private static ArrayList<ArrayList<RegExp>> getRegularExpressions(ArrayList<String> states, ArrayList<String> transitionFunctions) {
+
+        // Each element of this array list is the array list of regular expressions on current step.
+        ArrayList<ArrayList<RegExp>> expressions = new ArrayList<>(states.size() + 1);
+        // The first expressions will be the initial expressions.
+        expressions.add(getInitialRegularExpressions(states, transitionFunctions));
+
+        // Calculate regular expressions on each step.
+        for (int k = 0; k < states.size(); k++) {
+            // The Array List of regular expressions to fill for the current step.
+            ArrayList<RegExp> currentExpressions = new ArrayList<>(states.size() * states.size());
+            // The Array List of regular expressions which was calculated on the previous step.
+            ArrayList<RegExp> previousExpressions = expressions.get(k);
+
+            // Observe all possible state combinations
+            String k_state = states.get(k);
+            for (int i = 0; i < states.size(); i++) {
+                for (int j = 0; j < states.size(); j++) {
+                    String i_state = states.get(i);
+                    String j_state = states.get(j);
+
+                    // Each regular expression can be calculated using 4 regExp from the previous step.
+                    // R_ij = (R_ik) (R_kk)* (R_kj) | (R_ij)
+                    String[] regs = new String[4];
+
+                    for (RegExp regExp : previousExpressions) {
+                        // In case this regular expression is R_ik
+                        if (regExp.from.equals(i_state) && regExp.to.equals(k_state)) {
+                            regs[0] = regExp.value;
+                        } // In case this regular expression is R_kk
+                        if (regExp.from.equals(k_state) && regExp.to.equals(k_state)) {
+                            regs[1] = regExp.value;
+                        } // In case this regular expression is R_kj
+                        if (regExp.from.equals(k_state) && regExp.to.equals(j_state)) {
+                            regs[2] = regExp.value;
+                        } // In case this regular expression is R_ij
+                        if (regExp.from.equals(i_state) && regExp.to.equals(j_state)) {
+                            regs[3] = regExp.value;
+                        }
+                    }
+
+                    // Rewrite the 'regs' as a string.
+                    String value = '(' + regs[0] + ')' +
+                            '(' + regs[1] + ")*" +
+                            '(' + regs[2] + ")" +
+                            "|(" + regs[3] + ')';
+                    // Add new calculated regular expression.
+                    currentExpressions.add(new RegExp(i_state, j_state, value));
+                }
+            }
+
+            // Add all regular expressions calculated on this 'k' step.
+            expressions.add(currentExpressions);
+        }
+
+        return expressions;
+    }
+
+    /**
+     * Calculates the initial regular expressions.
+     * It represents the step = -1 from the 'Kleene’s Algorithm'.
+     *
+     * @param states               - states of (D)FSA.
+     * @param transitionFunctions- transitions of (D)FSA.
+     * @return the Array List of regular expressions of the step = -1.
+     */
+    private static ArrayList<RegExp> getInitialRegularExpressions(ArrayList<String> states, ArrayList<String> transitionFunctions) {
+        // Initial regular expressions.
+        ArrayList<RegExp> expressions = new ArrayList<>(states.size() * states.size());
+
+        // Observe all state combinations.
+        for (int i = 0; i < states.size(); i++) {
+            for (int j = 0; j < states.size(); j++) {
+                String from = states.get(i);
+                String to = states.get(j);
+
+                // Fill the regular expression for 'from' and 'to' states.
+                ArrayList<String> regExp = new ArrayList<>();
+
+                // If there is a transition which represents
+                // the connection between 'from' and 'to' states
+                // then we add this transition to the 'reExp'
+                for (String transition : transitionFunctions) {
+                    String[] x = transition.split(">");
+                    if (x[0].equals(from) && x[2].equals(to)) {
+                        regExp.add(x[1]);
+                    }
+                }
+
+                // Add epsilon if 'from' and 'to' are the same state.
+                if (i == j) {
+                    regExp.add("eps");
+                }
+                // Add empty set if there are no any possible transitions.
+                if (regExp.size() == 0) {
+                    regExp.add("{}");
+                }
+
+                // Rewrite 'regExp' to the string.
+                StringBuilder value = new StringBuilder();
+                value.append(regExp.get(0));
+                for (int k = 1; k < regExp.size(); k++) {
+                    value.append('|').append(regExp.get(k));
+                }
+
+                // Add new calculated regular expression.
+                expressions.add(new RegExp(from, to, value.toString()));
+            }
+        }
+
+        return expressions;
     }
 }
 
@@ -93,11 +277,11 @@ class FSAValidator {
         // Check for E5 error.
         if (checkE5(input)) {
             // Get strings of states, alphabet, initial state, finite states and transition functions.
-            ArrayList<String> states = getParameters(input.get(0).substring(STATES.length(), input.get(0).length() - 1));
-            ArrayList<String> alphabet = getParameters(input.get(1).substring(ALPHABET.length(), input.get(1).length() - 1));
-            ArrayList<String> initialState = getParameters(input.get(2).substring(INITIAL_STATE.length(), input.get(2).length() - 1));
-            ArrayList<String> finiteStates = getParameters(input.get(3).substring(FINITE_STATES.length(), input.get(3).length() - 1));
-            ArrayList<String> transitionFunctions = getParameters(input.get(4).substring(TRANSITION_FUNCTION.length(), input.get(4).length() - 1));
+            ArrayList<String> states = getStates(input);
+            ArrayList<String> alphabet = getAlphabet(input);
+            ArrayList<String> initialState = getInitialState(input);
+            ArrayList<String> finiteStates = getFiniteStates(input);
+            ArrayList<String> transitionFunctions = getTransitionFunctions(input);
 
             // Check for E1 error.
             if (checkE1(states, initialState, finiteStates, transitionFunctions)) {
@@ -653,6 +837,56 @@ class FSAValidator {
             return new ArrayList<>(Arrays.asList(string.split(",")));
         }
         return new ArrayList<>();
+    }
+
+    /**
+     * Method returns set of strings with states from the input.
+     *
+     * @param input - validated input.
+     * @return Array list of strings. Each string represents one state.
+     */
+    public static ArrayList<String> getStates(ArrayList<String> input) {
+        return getParameters(input.get(0).substring(STATES.length(), input.get(0).length() - 1));
+    }
+
+    /**
+     * Method returns set of strings with alphabet from the input.
+     *
+     * @param input - validated input.
+     * @return Array list of strings. Each string represents one alphabet element.
+     */
+    public static ArrayList<String> getAlphabet(ArrayList<String> input) {
+        return getParameters(input.get(1).substring(ALPHABET.length(), input.get(1).length() - 1));
+    }
+
+    /**
+     * Method returns set of strings with initial states from the input.
+     *
+     * @param input - validated input.
+     * @return Array list of strings (usually only one string). Each string represents one initial state.
+     */
+    public static ArrayList<String> getInitialState(ArrayList<String> input) {
+        return getParameters(input.get(2).substring(INITIAL_STATE.length(), input.get(2).length() - 1));
+    }
+
+    /**
+     * Method returns set of strings with finite states from the input.
+     *
+     * @param input - validated input.
+     * @return Array list of strings. Each string represents one finite state.
+     */
+    public static ArrayList<String> getFiniteStates(ArrayList<String> input) {
+        return getParameters(input.get(3).substring(FINITE_STATES.length(), input.get(3).length() - 1));
+    }
+
+    /**
+     * Method returns set of strings with transitions from the input.
+     *
+     * @param input - validated input.
+     * @return Array list of strings. Each string represents one transition function.
+     */
+    public static ArrayList<String> getTransitionFunctions(ArrayList<String> input) {
+        return getParameters(input.get(4).substring(TRANSITION_FUNCTION.length(), input.get(4).length() - 1));
     }
 
     /**

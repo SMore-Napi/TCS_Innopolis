@@ -85,7 +85,10 @@ class LambdaExpression {
     public static int getNumberRedexes(String expression) {
         int numberRedexes = 0;
 
-        // Each redex might happen with '(\' term.
+        // Each redex might happen with (\V.Λ)Λ term
+        // In this case such term requires to have a lambda sign '\'.
+        // Also, beta-redexes happen according to some variable outside of parenthesis.
+        // That's why we should consider '(\' substring.
         for (int i = 0; i < expression.length(); i++) {
             if ((expression.charAt(i) == '(') && (expression.charAt(i + 1) == '\\')) {
                 numberRedexes++;
